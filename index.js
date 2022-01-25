@@ -28,26 +28,35 @@ chart.get("colors").set("step", 2);
 // Create axes
 // https://www.amcharts.com/docs/v5/charts/xy-chart/axes/
 // when axes are in opposite side, they should be added in reverse order
-var volumeAxisRenderer = am5xy.AxisRendererY.new(root, {
-  opposite: true
-});
-volumeAxisRenderer.labels.template.setAll({
-  centerY: am5.percent(100),
-  maxPosition: 0.98
-});
-var volumeAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, {
-  renderer: volumeAxisRenderer,
-  height: am5.percent(30),
-  layer: 5
-}));
-volumeAxis.axisHeader.set("paddingTop", 10);
-volumeAxis.axisHeader.children.push(am5.Label.new(root, {
-  text: "Volume",
-  fontWeight: "bold",
-  paddingTop: 5,
-  paddingBottom: 5
-}));
 
+// volume series axes
+var xRenderer = am5xy.AxisRendererX.new(root, {});
+    xRenderer.grid.template.set("visible", false);
+
+    var peopleAxes = chart.xAxes.push(
+        am5xy.CategoryAxis.new(root, {
+            paddingTop: 20,
+            categoryField: "name",
+            renderer: xRenderer
+        })
+    );
+
+
+    var yRenderer = am5xy.AxisRendererY.new(root, {
+      opposite: true
+    });
+    yRenderer.grid.template.set("strokeDasharray", [3]);
+
+    var yAxis = chart.yAxes.push(
+        am5xy.ValueAxis.new(root, {
+            min: 0,
+            renderer: yRenderer,
+            height: am5.percent(30),
+            layer: 5
+        })
+    );
+
+// line series axes
 var valueAxisRenderer = am5xy.AxisRendererY.new(root, {
   opposite: true,
   pan: "zoom"
@@ -68,6 +77,7 @@ valueAxis.axisHeader.children.push(am5.Label.new(root, {
   paddingTop: 5
 }));
 
+//date axes
 var dateAxisRenderer = am5xy.AxisRendererX.new(root, {
   pan: "zoom"
 });
@@ -89,6 +99,8 @@ dateAxis.set("tooltip", am5.Tooltip.new(root, {}));
 
 // Add series
 // https://www.amcharts.com/docs/v5/charts/xy-chart/series/
+
+// line series
 var valueSeries1 = chart.series.push(am5xy.LineSeries.new(root, {
   name: "XTD",
   valueYField: "price1",
@@ -110,43 +122,178 @@ var valueTooltip = valueSeries1.set("tooltip", am5.Tooltip.new(root, {
 valueTooltip.get("background").set("fill", root.interfaceColors.get("background"));
 
 var firstColor = chart.get("colors").getIndex(0);
-var volumeSeries = chart.series.push(am5xy.ColumnSeries.new(root, {
-  name: "XTD",
-  fill: firstColor,
-  stroke: firstColor,
-  valueYField: "quantity",
-  valueXField: "date",
-  valueYGrouped: "sum",
-  xAxis: dateAxis,
-  yAxis: volumeAxis,
-  legendValueText: "{valueY}",
-  tooltip: am5.Tooltip.new(root, {
-    labelText: "{valueY}"
+
+// volumen series
+var series = chart.series.push(
+  am5xy.ColumnSeries.new(root, {
+      name: "Income",
+      xAxis: peopleAxes,
+      yAxis: yAxis,
+      valueYField: "steps",
+      categoryXField: "name",
+      sequencedInterpolation: true,
+      calculateAggregates: true,
+      maskBullets: false,
+      tooltip: am5.Tooltip.new(root, {
+          dy: -20,
+          pointerOrientation: "vertical",
+          labelText: "{valueY}"
+      })
   })
-}));
-volumeSeries.columns.template.setAll({
-  strokeWidth: 0.2,
-  strokeOpacity: 1,
-  stroke: am5.color(0xffffff)
+);
+
+series.columns.template.setAll({
+  strokeOpacity: 0,
+  cornerRadiusBR: 6,
+  cornerRadiusTR: 6,
+  cornerRadiusBL: 6,
+  cornerRadiusTL: 6,
+  maxWidth: 150,
+  fillOpacity: 0.8
 });
 
+var currentlyHovered;
+
+series.columns.template.events.on("pointerover", function (e) {
+  handleHover(e.target.dataItem);
+});
+
+series.columns.template.events.on("pointerout", function (e) {
+  handleOut();
+});
+
+function handleHover(dataItem) {
+  if (dataItem && currentlyHovered != dataItem) {
+      handleOut();
+      currentlyHovered = dataItem;
+      var bullet = dataItem.bullets[0];
+      bullet.animate({
+          key: "locationY",
+          to: 1,
+          duration: 600,
+          easing: am5.ease.out(am5.ease.cubic)
+      });
+  }
+}
+
+function handleOut() {
+  if (currentlyHovered) {
+      var bullet = currentlyHovered.bullets[0];
+      bullet.animate({
+          key: "locationY",
+          to: 0,
+          duration: 600,
+          easing: am5.ease.out(am5.ease.cubic)
+      });
+  }
+}
+
+var circleTemplate = am5.Template.new({});
+
+series.bullets.push(function (root, series, dataItem) {
+  var bulletContainer = am5.Container.new(root, {});
+  var circle = bulletContainer.children.push(
+      am5.Circle.new(
+          root,
+          {
+              radius: 14
+          },
+          circleTemplate
+      )
+  );
+
+  var maskCircle = bulletContainer.children.push(
+      am5.Circle.new(root, { radius: 17 })
+  );
+
+  // only containers can be masked, so we add image to another container
+  var imageContainer = bulletContainer.children.push(
+      am5.Container.new(root, {
+          mask: maskCircle
+      })
+  );
+
+  // not working
+  var image = imageContainer.children.push(
+      am5.Picture.new(root, {
+          templateField: "pictureSettings",
+          centerX: am5.p50,
+          centerY: am5.p50,
+          width: 40,
+          height: 40
+      })
+  );
+
+  return am5.Bullet.new(root, {
+      locationY: 0,
+      sprite: bulletContainer
+  });
+});
+
+// // Add scrollbar
+// // https://www.amcharts.com/docs/v5/charts/xy-chart/scrollbars/
+// var scrollbarX = am5.Scrollbar.new(root, {
+//     orientation: "horizontal",
+//     height: 10
+// });
+// chart.set("scrollbarX", scrollbarX);
+// chart.bottomAxesContainer.children.push(scrollbarX);
+
+// heatrule
+series.set("heatRules", [
+  {
+      dataField: "valueY",
+      min: am5.color(0x3A3A4A),
+      max: am5.color(0x3C3C64),
+      target: series.columns.template,
+      key: "fill"
+  },
+  {
+      dataField: "valueY",
+      min: am5.color(0x3A3A4A),
+      max: am5.color(0x3C3C64),
+      target: circleTemplate,
+      key: "fill"
+  }
+]);
+
+
+// series.data.setAll(data);
+// peopleAxes.data.setAll(data);
+
+var cursor = chart.set("cursor", am5xy.XYCursor.new(root, {}));
+cursor.lineX.set("visible", false);
+cursor.lineY.set("visible", false);
+
+cursor.events.on("cursormoved", function () {
+  var dataItem = series.get("tooltip").dataItem;
+  if (dataItem) {
+      handleHover(dataItem);
+  } else {
+      handleOut();
+  }
+});
+
+// Make stuff animate on load
+// https://www.amcharts.com/docs/v5/concepts/animations/
+series.appear();
 
 // Add legend to axis header
 // https://www.amcharts.com/docs/v5/charts/xy-chart/axes/axis-headers/
 // https://www.amcharts.com/docs/v5/charts/xy-chart/legend-xy-series/
-var valueLegend = valueAxis.axisHeader.children.push(
-  am5.Legend.new(root, {
-    useDefaultMarker: true
-  })
-);
-valueLegend.data.setAll([valueSeries1]);
+// var valueLegend = valueAxis.axisHeader.children.push(
+//   am5.Legend.new(root, {
+//     useDefaultMarker: true
+//   })
+// );
+// valueLegend.data.setAll([valueSeries1]);
 
-var volumeLegend = volumeAxis.axisHeader.children.push(
-  am5.Legend.new(root, {
-    useDefaultMarker: true
-  })
-);
-volumeLegend.data.setAll([volumeSeries]);
+// var volumeLegend = volumeAxis.axisHeader.children.push(
+//   am5.Legend.new(root, {
+//     useDefaultMarker: true
+//   })
+// );
+// volumeLegend.data.setAll([volumeSeries]);
 
 
 // Stack axes vertically
@@ -200,6 +347,51 @@ sbSeries.fills.template.setAll({
 
 // Generate random data and set on series
 // https://www.amcharts.com/docs/v5/charts/xy-chart/series/#Setting_data
+var data2 = [{
+  name: "Monica",
+  steps: 45688,
+  pictureSettings: {
+      src: "https://www.amcharts.com/wp-content/uploads/2019/04/monica.jpg"
+  }
+}, {
+  name: "Joey",
+  steps: 35781,
+  pictureSettings: {
+      src: "https://www.amcharts.com/wp-content/uploads/2019/04/joey.jpg"
+  }
+}, {
+  name: "Ross",
+  steps: 25464,
+  pictureSettings: {
+      src: "https://www.amcharts.com/wp-content/uploads/2019/04/ross.jpg"
+  }
+}, {
+  name: "Phoebe",
+  steps: 18788,
+  pictureSettings: {
+      src: "https://www.amcharts.com/wp-content/uploads/2019/04/phoebe.jpg"
+  }
+}, {
+  name: "Rachel",
+  steps: 15465,
+  pictureSettings: {
+      src: "https://www.amcharts.com/wp-content/uploads/2019/04/rachel.jpg"
+  }
+}, {
+  name: "Chandler",
+  steps: 11561,
+  pictureSettings: {
+      src: "https://www.amcharts.com/wp-content/uploads/2019/04/chandler.jpg"
+  }
+
+}, {
+  name: "John",
+  steps: 48561,
+  pictureSettings: {
+      src: "https://www.amcharts.com/wp-content/uploads/2019/04/chandler.jpg"
+  }
+}];
+
 var data = [];
 var price1 = 1000;
 var quantity = 10000;
@@ -224,7 +416,8 @@ for (var i = 1; i < 5000; i++) {
 }
 
 valueSeries1.data.setAll(data);
-volumeSeries.data.setAll(data);
+series.data.setAll(data2);
+peopleAxes.data.setAll(data2);
 sbSeries.data.setAll(data);
 
 
