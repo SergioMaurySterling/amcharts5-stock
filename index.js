@@ -2,7 +2,7 @@ am5.ready(function() {
 
 // Create root element
 // https://www.amcharts.com/docs/v5/getting-started/#Root_element
-var root = am5.Root.new("chartdiv");
+var root = am5.Root.new("chartutilizationpeople");
 
 
 // Set themes
@@ -102,7 +102,6 @@ dateAxis.set("tooltip", am5.Tooltip.new(root, {}));
 
 // line series
 var valueSeries1 = chart.series.push(am5xy.LineSeries.new(root, {
-  name: "XTD",
   valueYField: "price1",
   calculateAggregates: true,
   valueXField: "date",
@@ -111,13 +110,34 @@ var valueSeries1 = chart.series.push(am5xy.LineSeries.new(root, {
   legendValueText: "{valueY}"
 }));
 
+valueSeries1.bullets.push(function () {
+  return am5.Bullet.new(root, {
+      locationY: 0,
+      sprite: am5.Circle.new(root, {
+          radius: 4,
+          stroke: am5.color(0x00FF91),
+          strokeWidth: 2,
+          fill: am5.color(0x00FF91),
+      })
+  });
+});
+
+valueSeries1.fills.template.set("fillGradient", am5.LinearGradient.new(root, {
+  stops: [{
+    opacity: 0.2
+  }, {
+    opacity: 0
+  }],
+  rotation: 90
+}));
+
 var valueTooltip = valueSeries1.set("tooltip", am5.Tooltip.new(root, {
   getFillFromSprite: false,
   getStrokeFromSprite: true,
   getLabelFillFromSprite: true,
   autoTextColor: false,
   pointerOrientation: "horizontal",
-  labelText: "{name}: {valueY} {valueYChangePercent.formatNumber('[#00ff00]+#,###.##|[#ff0000]#,###.##|[#999999]0')}%"
+  labelText: "{valueY}"
 }));
 valueTooltip.get("background").set("fill", root.interfaceColors.get("background"));
 
@@ -148,7 +168,7 @@ series.columns.template.setAll({
   cornerRadiusTR: 6,
   cornerRadiusBL: 6,
   cornerRadiusTL: 6,
-  maxWidth: 150,
+  maxWidth: 50,
   fillOpacity: 0.8
 });
 
@@ -281,19 +301,19 @@ series.appear();
 // Add legend to axis header
 // https://www.amcharts.com/docs/v5/charts/xy-chart/axes/axis-headers/
 // https://www.amcharts.com/docs/v5/charts/xy-chart/legend-xy-series/
-// var valueLegend = valueAxis.axisHeader.children.push(
-//   am5.Legend.new(root, {
-//     useDefaultMarker: true
-//   })
-// );
-// valueLegend.data.setAll([valueSeries1]);
+var valueLegend = valueAxis.axisHeader.children.push(
+  am5.Legend.new(root, {
+  useDefaultMarker: true
+})
+);
+valueLegend.data.setAll([valueSeries1]);
 
-// var volumeLegend = volumeAxis.axisHeader.children.push(
-//   am5.Legend.new(root, {
-//     useDefaultMarker: true
-//   })
-// );
-// volumeLegend.data.setAll([volumeSeries]);
+var volumeLegend = yAxis.axisHeader.children.push(
+  am5.Legend.new(root, {
+  useDefaultMarker: true
+})
+);
+volumeLegend.data.setAll([series]);
 
 
 // Stack axes vertically
@@ -310,7 +330,7 @@ chart.set("cursor", am5xy.XYCursor.new(root, {}))
 // https://www.amcharts.com/docs/v5/charts/xy-chart/scrollbars/
 var scrollbar = chart.set("scrollbarX", am5xy.XYChartScrollbar.new(root, {
   orientation: "horizontal",
-  height: 50
+  height: 30
 }));
 
 var sbDateAxis = scrollbar.chart.xAxes.push(am5xy.DateAxis.new(root, {
